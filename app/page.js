@@ -124,7 +124,7 @@ export default function Home() {
                 </div>
                 
                 <a
-                  href="https://company-resilience-analyzer-ck4csdaor-sunils-projects-7b08a1e8.vercel.app/"
+                  href="https://company-resilience-analyzer.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-3 w-full justify-center bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"

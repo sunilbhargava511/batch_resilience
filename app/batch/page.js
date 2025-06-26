@@ -162,7 +162,7 @@ export default function BatchScores() {
             </Link>
             
             <a 
-              href="https://company-resilience-analyzer-ck4csdaor-sunils-projects-7b08a1e8.vercel.app/"
+              href="https://company-resilience-analyzer.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"

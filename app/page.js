@@ -123,14 +123,16 @@ export default function Home() {
                   </div>
                 </div>
                 
-                <Link
-                  href="/full-analysis"
+                <a
+                  href="https://company-resilience-analyzer-ck4csdaor-sunils-projects-7b08a1e8.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-3 w-full justify-center bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
                   <Building2 className="w-5 h-5" />
                   <span>Start Full Analysis</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
-                </Link>
+                </a>
                 
                 <div className="mt-4 text-center text-sm text-white/60">
                   Perfect for: Investment decisions, strategic planning

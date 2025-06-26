@@ -161,13 +161,15 @@ export default function BatchScores() {
               <span>Back to Home</span>
             </Link>
             
-            <Link 
-              href="/"
+            <a 
+              href="https://company-resilience-analyzer-ck4csdaor-sunils-projects-7b08a1e8.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
             >
               <Home className="w-5 h-5" />
               <span>Full Analysis</span>
-            </Link>
+            </a>
           </div>
           
           <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-emerald-500 via-blue-500 to-purple-500 rounded-2xl mb-6 shadow-2xl shadow-emerald-500/30">

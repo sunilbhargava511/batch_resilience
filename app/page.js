@@ -63,7 +63,7 @@ export default function Home() {
             </h1>
             
             <p className="text-xl lg:text-2xl text-slate-300 max-w-4xl mx-auto leading-relaxed mb-8 font-light">
-              Advanced resilience evaluation using <strong className="text-emerald-400">NZS Capital's Complexity Investing</strong> framework. 
+              Advanced resilience evaluation using <strong className="text-emerald-400">Complexity Investing</strong> framework. 
               Assess adaptability, optionality, and long-term value creation potential with institutional-grade analysis.
             </p>
             
@@ -195,7 +195,7 @@ export default function Home() {
             <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-8">
               <h3 className="text-2xl font-bold text-white mb-6 flex items-center justify-center gap-3">
                 <Star className="w-6 h-6 text-yellow-400" />
-                NZS Capital Framework
+                Complexity Investing Framework
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -242,7 +242,7 @@ export default function Home() {
                 <span className="text-slate-300">Secure & Private Analysis</span>
                 <span className="text-slate-500">•</span>
                 <Activity className="w-5 h-5 text-blue-400" />
-                <span className="text-slate-300">NZS Capital Framework</span>
+                <span className="text-slate-300">Complexity Framework</span>
                 <span className="text-slate-500">•</span>
                 <Zap className="w-5 h-5 text-purple-400" />
                 <span className="text-slate-300">Powered by Claude AI</span>

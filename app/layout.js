@@ -1,10 +1,10 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Batch Resilience Analyzer | NZS Capital Framework',
-  description: 'Batch analyze company resilience and optionality scores using NZS Capital\'s Complexity Investing framework.',
+  title: 'Batch Resilience Analyzer | Complexity Investing Framework',
+  description: 'Batch analyze company resilience and optionality scores using Complexity Investing framework.',
   keywords: [
-    'company resilience', 'complexity investing', 'NZS Capital', 'resilience scoring', 
+    'company resilience', 'complexity investing', 'resilience scoring', 
     'investment analysis', 'batch processing', 'ticker analysis'
   ],
 };

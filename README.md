@@ -1,6 +1,6 @@
 # Batch Resilience Analyzer
 
-Batch analyze company resilience and optionality scores using NZS Capital's Complexity Investing framework.
+Batch analyze company resilience and optionality scores using Complexity Investing framework.
 
 ## Quick Start
 
@@ -45,4 +45,4 @@ This app is designed to deploy easily on Vercel:
 - Lucide React Icons
 - Claude AI (Anthropic)
 
-Built with ❤️ using NZS Capital's Complexity Investing framework.
+Built with ❤️ using Complexity Investing framework.

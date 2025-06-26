@@ -1,7 +1,7 @@
 {
   "name": "batch-resilience",
   "version": "2.0.0",
-  "description": "Batch analyze company resilience and optionality scores using NZS Capital's Complexity Investing framework",
+  "description": "Batch analyze company resilience and optionality scores using Complexity Investing framework",
   "private": true,
   "scripts": {
     "dev": "next dev",

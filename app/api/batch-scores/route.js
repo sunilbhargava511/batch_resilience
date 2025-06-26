@@ -29,7 +29,7 @@ export async function POST(request) {
       );
     }
 
-    const BATCH_SCORING_PROMPT = `You are a financial analyst using NZS Capital's Complexity Investing framework. 
+    const BATCH_SCORING_PROMPT = `You are a financial analyst using Complexity Investing framework. 
 
 For each company ticker symbol provided, evaluate and return ONLY two scores:
 

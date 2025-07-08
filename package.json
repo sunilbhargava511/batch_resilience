@@ -1,0 +1,29 @@
+{
+  "name": "batch-resilience",
+  "version": "2.0.0",
+  "description": "Batch analyze company resilience and optionality scores using Complexity Investing framework",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^7.4.0",
+    "lucide-react": "^0.263.1",
+    "next": "14.0.4",
+    "next-auth": "^4.24.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "stripe": "^18.2.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -16,10 +16,8 @@ async function handler(request) {
 
     console.log(`Processing batch ${currentBatch + 1} of ${batches.length} for job ${jobId}`);
 
-    // Process current batch
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
+    // Use your production URL
+    const baseUrl = 'https://batch-resilience.vercel.app';
 
     const response = await fetch(`${baseUrl}/api/batch-scores`, {
       method: 'POST',
@@ -133,7 +131,7 @@ async function sendResultsEmail(email, results, jobId) {
     <p style="color: #666; font-size: 12px;">
       Job ID: ${jobId}<br>
       Powered by Complexity Investing Framework<br>
-      <a href="https://company-resilience-analyzer.vercel.app/">Run another analysis</a>
+      <a href="https://batch-resilience.vercel.app/">Run another analysis</a>
     </p>
   `;
 
@@ -202,9 +200,9 @@ async function sendErrorEmail(email, jobId, errorMessage, partialResults, failed
   });
 }
 
-export const POST = handler;  // Temporarily bypass verification
+// TEMPORARILY bypassing signature verification
+// TODO: Re-enable this once signing keys are properly configured
+export const POST = handler;
 
-// Also export a regular POST for local testing
-export async function POST_UNSIGNED(request) {
-  return handler(request);
-}
+// When ready to re-enable signature verification, change the above line to:
+// export const POST = verifySignature(handler);

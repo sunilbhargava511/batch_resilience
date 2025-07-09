@@ -24,11 +24,12 @@ export async function POST(request) {
     }
 
     const jobId = `job_${Date.now()}`;
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
+    
+    // Use your production URL
+    const baseUrl = 'https://batch-resilience.vercel.app';
 
     console.log(`Creating batch job ${jobId} for ${tickers.length} tickers in ${batches.length} batches`);
+    console.log(`Webhook URL: ${baseUrl}/api/batch-processor`);
 
     // Queue the job
     await qstash.publishJSON({

@@ -14,6 +14,7 @@ Batch analyze company resilience and optionality scores using Complexity Investi
 - **Resilience Score (1-10)**: Company adaptability and durability
 - **Optionality Score (1-10)**: Growth potential through adjacent markets  
 - **Configurable Batch Processing**: Analyze up to your specified limit (default 500) companies at once
+- **CSV File Upload**: Upload ticker symbols from CSV files for easy batch processing
 - **Progress Tracking**: Real-time progress indicators for large batches
 - **Smart Warnings**: Automatic time estimates and warnings for large batches
 - **CSV Export**: Download results for further analysis
@@ -21,7 +22,32 @@ Batch analyze company resilience and optionality scores using Complexity Investi
 
 ## Usage
 
+### Manual Input
 Enter ticker symbols separated by commas: `AAPL, MSFT, GOOGL, AMZN`
+
+### CSV Upload
+Upload a CSV file containing ticker symbols. The app supports:
+- CSV files with or without headers
+- Multiple columns (automatically detects ticker columns)
+- Common delimiters (comma, semicolon, tab)
+- Download a sample CSV template from the interface
+
+**Example CSV formats:**
+```
+Ticker,Company Name
+AAPL,Apple Inc
+MSFT,Microsoft Corporation
+```
+
+or simply:
+```
+AAPL
+MSFT
+GOOGL
+```
+
+### Combined Input
+You can use both manual input and CSV upload together - duplicates are automatically removed.
 
 **Batch Size Recommendations:**
 - **1-50 companies**: ~30-60 seconds
@@ -126,6 +152,13 @@ Get batch configuration.
 - Claude AI (Anthropic)
 
 ## New Features
+
+### CSV File Upload
+- Upload CSV files containing ticker symbols
+- Smart detection of ticker columns
+- Support for various CSV formats and delimiters
+- Download sample CSV template
+- Combine manual input with CSV uploads
 
 ### Progress Tracking
 - Real-time progress indicators during analysis

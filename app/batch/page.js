@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   BarChart3,
@@ -20,7 +20,9 @@ import {
   Home,
   Clock,
   AlertTriangle,
-  Info
+  Info,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 
 export default function BatchScores() {
@@ -31,6 +33,9 @@ export default function BatchScores() {
   const [error, setError] = useState('');
   const [batchSizeLimit, setBatchSizeLimit] = useState(500);
   const [analysisProgress, setAnalysisProgress] = useState({ stage: '', progress: 0 });
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedTickers, setUploadedTickers] = useState([]);
+  const fileInputRef = useRef(null);
 
   const models = [
     { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Best available - excellent intelligence and speed' },
@@ -57,11 +62,110 @@ export default function BatchScores() {
   }, []);
 
   const processTickerInput = (input) => {
-    return input
+    const manualTickers = input
       .toUpperCase()
       .split(/[,\s\n]+/)
-      .filter(ticker => ticker.trim())
-      .slice(0, batchSizeLimit);
+      .filter(ticker => ticker.trim());
+    
+    // Combine manual input with uploaded tickers, remove duplicates
+    const allTickers = [...new Set([...manualTickers, ...uploadedTickers])];
+    return allTickers.slice(0, batchSizeLimit);
+  };
+
+  const parseCSVFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        try {
+          const text = event.target.result;
+          const lines = text.split(/\r?\n/).filter(line => line.trim());
+          
+          // Try to detect header row
+          const firstLine = lines[0];
+          const hasHeader = firstLine && (
+            firstLine.toLowerCase().includes('ticker') ||
+            firstLine.toLowerCase().includes('symbol') ||
+            firstLine.toLowerCase().includes('stock') ||
+            isNaN(firstLine.charAt(0))
+          );
+          
+          const dataLines = hasHeader ? lines.slice(1) : lines;
+          const tickers = [];
+          
+          dataLines.forEach(line => {
+            // Handle different CSV formats
+            const cells = line.split(/[,;\t]/).map(cell => cell.trim());
+            
+            // Look for ticker-like values (typically uppercase letters, 1-5 chars)
+            cells.forEach(cell => {
+              // Remove quotes if present
+              const cleanCell = cell.replace(/["']/g, '').trim();
+              
+              // Check if it looks like a ticker symbol
+              if (cleanCell && /^[A-Za-z]{1,5}$/.test(cleanCell)) {
+                tickers.push(cleanCell.toUpperCase());
+              }
+            });
+          });
+          
+          // Remove duplicates
+          const uniqueTickers = [...new Set(tickers)];
+          resolve(uniqueTickers);
+        } catch (err) {
+          reject(new Error('Failed to parse CSV file'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      
+      reader.readAsText(file);
+    });
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      return;
+    }
+    
+    setError('');
+    setUploadedFile(file);
+    
+    try {
+      const tickers = await parseCSVFile(file);
+      
+      if (tickers.length === 0) {
+        setError('No valid ticker symbols found in CSV file');
+        setUploadedFile(null);
+        setUploadedTickers([]);
+        return;
+      }
+      
+      setUploadedTickers(tickers);
+      
+      // Show success message
+      const message = `Loaded ${tickers.length} ticker${tickers.length > 1 ? 's' : ''} from ${file.name}`;
+      console.log(message);
+      
+    } catch (err) {
+      setError(err.message);
+      setUploadedFile(null);
+      setUploadedTickers([]);
+    }
+  };
+
+  const removeUploadedFile = () => {
+    setUploadedFile(null);
+    setUploadedTickers([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const getEstimatedTime = (tickerCount) => {
@@ -83,7 +187,7 @@ export default function BatchScores() {
     const tickers = processTickerInput(tickerInput);
     
     if (tickers.length === 0) {
-      setError('Please enter at least one ticker symbol');
+      setError('Please enter ticker symbols or upload a CSV file');
       return;
     }
 
@@ -144,6 +248,7 @@ export default function BatchScores() {
     setTickerInput('');
     setResults([]);
     setError('');
+    removeUploadedFile();
   };
 
   const downloadResults = () => {
@@ -161,6 +266,25 @@ export default function BatchScores() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `batch_scores_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadSampleCSV = () => {
+    const sampleCSV = [
+      'Ticker,Company Name',
+      'AAPL,Apple Inc',
+      'MSFT,Microsoft Corporation',
+      'GOOGL,Alphabet Inc',
+      'AMZN,Amazon.com Inc',
+      'TSLA,Tesla Inc'
+    ].join('\n');
+    
+    const blob = new Blob([sampleCSV], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_tickers.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -263,21 +387,81 @@ export default function BatchScores() {
                     <Building2 className="w-5 h-5 text-emerald-400" />
                     Ticker Symbols
                   </label>
-                  <div className="relative">
-                    <textarea
-                      value={tickerInput}
-                      onChange={(e) => setTickerInput(e.target.value)}
-                      placeholder="Enter ticker symbols separated by commas or spaces&#10;Example: AAPL, MSFT, GOOGL, AMZN"
-                      className="w-full h-32 px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
-                    />
-                    {tickerInput && (
+                  
+                  {/* Input Methods Tabs */}
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={tickerInput}
+                        onChange={(e) => setTickerInput(e.target.value)}
+                        placeholder="Enter ticker symbols separated by commas or spaces&#10;Example: AAPL, MSFT, GOOGL, AMZN"
+                        className="w-full h-32 px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
+                      />
+                      {tickerInput && (
+                        <button
+                          onClick={clearInput}
+                          className="absolute top-3 right-3 p-1 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* CSV Upload Section */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-white/80">
+                        <FileSpreadsheet className="w-4 h-4 text-blue-400" />
+                        <span>Or upload a CSV file</span>
+                      </div>
                       <button
-                        onClick={clearInput}
-                        className="absolute top-3 right-3 p-1 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
+                        onClick={downloadSampleCSV}
+                        className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition"
                       >
-                        <X className="w-4 h-4" />
+                        Sample CSV
                       </button>
+                    </div>
+                    
+                    {!uploadedFile ? (
+                      <div className="relative">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                          id="csv-upload"
+                        />
+                        <label
+                          htmlFor="csv-upload"
+                          className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white/5 border border-dashed border-white/20 rounded-lg text-white/60 hover:bg-white/10 hover:border-white/30 hover:text-white cursor-pointer transition"
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span>Click to upload CSV</span>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between px-3 py-2 bg-emerald-500/20 border border-emerald-400/30 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-emerald-200">
+                          <FileText className="w-4 h-4" />
+                          <span>{uploadedFile.name}</span>
+                          <span className="text-emerald-300 font-medium">
+                            ({uploadedTickers.length} tickers)
+                          </span>
+                        </div>
+                        <button
+                          onClick={removeUploadedFile}
+                          className="p-1 text-emerald-200 hover:text-white hover:bg-emerald-500/20 rounded transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
+                    
+                    <div className="text-xs text-white/50 mt-2">
+                      CSV should contain ticker symbols. Headers are optional.
+                    </div>
                   </div>
                   
                   <div className="flex gap-2 mt-2 items-center flex-wrap">
@@ -289,6 +473,11 @@ export default function BatchScores() {
                     </button>
                     <div className="text-sm text-white/60 flex items-center">
                       {currentTickerCount}/{batchSizeLimit} tickers
+                      {uploadedTickers.length > 0 && (
+                        <span className="ml-2 text-emerald-400">
+                          ({uploadedTickers.length} from CSV)
+                        </span>
+                      )}
                     </div>
                     {currentTickerCount > 0 && (
                       <div className="flex items-center gap-1 text-sm text-white/60">
@@ -380,15 +569,19 @@ export default function BatchScores() {
                 </div>
 
                 <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                  <h3 className="text-white font-semibold mb-3">Quick Facts</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-emerald-400">~10s</div>
-                      <div className="text-white/60">Per Ticker</div>
+                  <h3 className="text-white font-semibold mb-3">Input Methods</h3>
+                  <div className="space-y-3 text-sm text-white/70">
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-1.5"></div>
+                      <span><strong>Manual:</strong> Type or paste tickers directly</span>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-400">{batchSizeLimit}</div>
-                      <div className="text-white/60">Max Batch</div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5"></div>
+                      <span><strong>CSV Upload:</strong> Upload a file with ticker symbols</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5"></div>
+                      <span><strong>Combined:</strong> Use both methods together</span>
                     </div>
                   </div>
                 </div>

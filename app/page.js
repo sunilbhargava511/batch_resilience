@@ -180,15 +180,15 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-3 text-white/80">
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    <span>CSV file upload support</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-white/80">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
                     <span>Resilience & optionality scores</span>
                   </div>
                   <div className="flex items-center gap-3 text-white/80">
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
                     <span>CSV export for spreadsheets</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/80">
-                    <CheckCircle className="w-5 h-5 text-emerald-400" />
-                    <span>Progress tracking & smart warnings</span>
                   </div>
                 </div>
                 

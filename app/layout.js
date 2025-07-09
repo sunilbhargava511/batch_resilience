@@ -19,10 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className="min-h-screen bg-red-500 text-white">
-        <div className="bg-blue-500 p-4 text-center">
-          🔥 TAILWIND TEST - You should see red background and blue box
-        </div>
+      <body className="min-h-screen">
         {children}
       </body>
     </html>

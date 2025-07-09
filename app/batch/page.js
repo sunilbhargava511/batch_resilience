@@ -522,11 +522,11 @@ export default function BatchScores() {
                 </div>
 
                 {/* Email input field for large batches */}
-                {currentTickerCount > 25 && (
+                {currentTickerCount > 15 && (
                   <div className="mt-4">
                     <label className="block text-white font-semibold mb-3 flex items-center gap-2">
                       <Mail className="w-5 h-5 text-emerald-400" />
-                      Email for Results (Required for 25+ tickers)
+                      Email for Results (Required for 15+ tickers)
                     </label>
                     <input
                       type="email"
@@ -534,7 +534,7 @@ export default function BatchScores() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="your@email.com"
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                      required={currentTickerCount > 25}
+                      required={currentTickerCount > 15}
                     />
                     <p className="text-xs text-white/60 mt-2">
                       Large batches are processed in the background. Results will be emailed as a CSV file.
@@ -654,7 +654,7 @@ export default function BatchScores() {
                       ></div>
                     </div>
                     <div className="text-sm text-white/60 mt-2">
-                      {currentTickerCount > 25 ? 'Submitting batch job...' : `Analyzing ${currentTickerCount} companies...`}
+                      {currentTickerCount > 15 ? 'Submitting batch job...' : `Analyzing ${currentTickerCount} companies...`}
                     </div>
                   </div>
                 )}
@@ -695,7 +695,7 @@ export default function BatchScores() {
                 <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl p-4 max-w-md mx-auto">
                   <p className="text-emerald-200 text-sm">
                     <strong>What happens next:</strong><br/>
-                    1. Your batch will be processed in chunks of 25<br/>
+                    1. Your batch will be processed in chunks of 15<br/>
                     2. Each chunk has a 30-second delay to respect API limits<br/>
                     3. Results will be emailed to <strong>{batchJobInfo.email}</strong><br/>
                     4. Estimated time: <strong>{batchJobInfo.estimatedTime}</strong><br/>

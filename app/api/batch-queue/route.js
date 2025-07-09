@@ -16,8 +16,8 @@ export async function POST(request) {
       );
     }
 
-    // Split tickers into batches of 25
-    const batchSize = 25;
+    // Reduce batch size to 15 for better reliability
+    const batchSize = 15;
     const batches = [];
     for (let i = 0; i < tickers.length; i += batchSize) {
       batches.push(tickers.slice(i, i + batchSize));
@@ -28,7 +28,7 @@ export async function POST(request) {
     // Use your production URL
     const baseUrl = 'https://batch-resilience.vercel.app';
 
-    console.log(`Creating batch job ${jobId} for ${tickers.length} tickers in ${batches.length} batches`);
+    console.log(`Creating batch job ${jobId} for ${tickers.length} tickers in ${batches.length} batches of ${batchSize}`);
     console.log(`Webhook URL: ${baseUrl}/api/batch-processor`);
 
     // Queue the job
@@ -44,13 +44,14 @@ export async function POST(request) {
       },
     });
 
-    const estimatedMinutes = Math.ceil(batches.length * 0.75); // ~45 seconds per batch
+    const estimatedMinutes = Math.ceil(batches.length * 0.5); // ~30 seconds per batch
 
     return NextResponse.json({
       success: true,
       jobId,
       message: `Processing ${tickers.length} tickers in ${batches.length} batches`,
-      estimatedTime: `${estimatedMinutes}-${estimatedMinutes + 2} minutes`
+      estimatedTime: `${estimatedMinutes}-${estimatedMinutes + 2} minutes`,
+      batchSize: batchSize
     });
 
   } catch (error) {

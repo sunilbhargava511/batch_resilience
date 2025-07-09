@@ -20,6 +20,10 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className="min-h-screen">
+        {/* Tailwind Test - Remove this after testing */}
+        <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-2 text-center z-50">
+          If you see this red bar, Tailwind IS working!
+        </div>
         {children}
       </body>
     </html>

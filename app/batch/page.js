@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Info,
   FileSpreadsheet,
-  FileText
+  FileText,
+  Mail
 } from 'lucide-react';
 
 export default function BatchScores() {
@@ -35,6 +36,8 @@ export default function BatchScores() {
   const [analysisProgress, setAnalysisProgress] = useState({ stage: '', progress: 0 });
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedTickers, setUploadedTickers] = useState([]);
+  const [email, setEmail] = useState('');
+  const [processingLargeBatch, setProcessingLargeBatch] = useState(false);
   const fileInputRef = useRef(null);
 
   const models = [
@@ -191,44 +194,71 @@ export default function BatchScores() {
       return;
     }
 
+    // For batches larger than 25, require email
+    if (tickers.length > 25 && !email) {
+      setError('Please enter your email address for batches larger than 25 tickers');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setResults([]);
     
-    // Progress tracking
-    setAnalysisProgress({ stage: 'Preparing analysis...', progress: 10 });
-    
     try {
-      // Update progress
-      setAnalysisProgress({ stage: 'Sending request to AI...', progress: 20 });
-      
-      const response = await fetch('/api/batch-scores', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tickers,
-          model
-        })
-      });
+      if (tickers.length <= 25) {
+        // Process small batches immediately (existing code)
+        setAnalysisProgress({ stage: 'Preparing analysis...', progress: 10 });
+        
+        const response = await fetch('/api/batch-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tickers, model })
+        });
 
-      setAnalysisProgress({ stage: 'Processing response...', progress: 80 });
+        setAnalysisProgress({ stage: 'Processing response...', progress: 80 });
+        const data = await response.json();
 
-      const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Analysis failed');
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Analysis failed');
+        setAnalysisProgress({ stage: 'Finalizing results...', progress: 95 });
+        setTimeout(() => {
+          setResults(data.results);
+          setAnalysisProgress({ stage: 'Complete!', progress: 100 });
+        }, 500);
+
+      } else {
+        // Process large batches in background
+        setProcessingLargeBatch(true);
+        setAnalysisProgress({ stage: 'Submitting batch job...', progress: 20 });
+        
+        const response = await fetch('/api/batch-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            tickers, 
+            model, 
+            email 
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create batch job');
+        }
+
+        setAnalysisProgress({ stage: 'Job submitted!', progress: 100 });
+        
+        // Show success message
+        setResults([{
+          ticker: 'BATCH JOB',
+          company_name: `Processing ${tickers.length} tickers`,
+          resilience_score: 0,
+          optionality_score: 0,
+          notes: `Results will be emailed to ${email} in approximately ${data.estimatedTime}. You can close this window.`
+        }]);
       }
-
-      setAnalysisProgress({ stage: 'Finalizing results...', progress: 95 });
-      
-      // Small delay to show final progress
-      setTimeout(() => {
-        setResults(data.results);
-        setAnalysisProgress({ stage: 'Complete!', progress: 100 });
-      }, 500);
-
     } catch (err) {
       setError(err.message || 'An error occurred while analyzing tickers');
       setAnalysisProgress({ stage: '', progress: 0 });
@@ -236,6 +266,7 @@ export default function BatchScores() {
       setTimeout(() => {
         setLoading(false);
         setAnalysisProgress({ stage: '', progress: 0 });
+        setProcessingLargeBatch(false);
       }, 1000);
     }
   };
@@ -488,6 +519,27 @@ export default function BatchScores() {
                   </div>
                 </div>
 
+                {/* Email input field for large batches */}
+                {currentTickerCount > 25 && (
+                  <div className="mt-4">
+                    <label className="block text-white font-semibold mb-3 flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-emerald-400" />
+                      Email for Results (Required for 25+ tickers)
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      required={currentTickerCount > 25}
+                    />
+                    <p className="text-xs text-white/60 mt-2">
+                      Large batches are processed in the background. Results will be emailed as a CSV file.
+                    </p>
+                  </div>
+                )}
+
                 {/* Batch Size Warning */}
                 {warningLevel && (
                   <div className={`flex items-start gap-3 p-4 rounded-xl border ${
@@ -600,7 +652,7 @@ export default function BatchScores() {
                       ></div>
                     </div>
                     <div className="text-sm text-white/60 mt-2">
-                      Analyzing {currentTickerCount} companies...
+                      {currentTickerCount > 25 ? 'Submitting batch job...' : `Analyzing ${currentTickerCount} companies...`}
                     </div>
                   </div>
                 )}
@@ -614,7 +666,7 @@ export default function BatchScores() {
                   {loading ? (
                     <div className="flex items-center justify-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Analyzing {currentTickerCount} tickers...</span>
+                      <span>Processing...</span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-3">
@@ -627,8 +679,30 @@ export default function BatchScores() {
             </div>
           </div>
 
-          {/* Results Section */}
-          {results.length > 0 && (
+          {/* Results Section for batch jobs */}
+          {processingLargeBatch && results.length > 0 && results[0].ticker === 'BATCH JOB' && (
+            <div className="bg-white/10 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full mb-4">
+                  <Mail className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Batch Job Submitted!</h3>
+                <p className="text-white/80 mb-4">{results[0].notes}</p>
+                <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl p-4 max-w-md mx-auto">
+                  <p className="text-emerald-200 text-sm">
+                    <strong>What happens next:</strong><br/>
+                    1. Your batch will be processed in chunks of 25<br/>
+                    2. Each chunk has a 30-second delay to respect API limits<br/>
+                    3. You'll receive an email with the complete CSV file<br/>
+                    4. The email includes all scores and summary statistics
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Regular Results Section */}
+          {!processingLargeBatch && results.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               {/* Results Header */}
               <div className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 text-white p-6">

@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "app/api/batch-processor/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/batch-scores/route.js": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -6,6 +6,14 @@ module.exports = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'bg-gradient-to-br',
+    'from-slate-950',
+    'via-indigo-950',
+    'to-purple-950',
+    'text-white',
+    'min-h-screen'
+  ],
   theme: {
     extend: {
       animation: {

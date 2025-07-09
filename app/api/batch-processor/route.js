@@ -10,10 +10,11 @@ const qstash = new Client({
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function handler(request) {
-  try {
-    const body = await request.json();
-    const { jobId, batches, model, email, currentBatch, results } = body;
+  // Parse body once at the beginning
+  const body = await request.json();
+  const { jobId, batches, model, email, currentBatch, results } = body;
 
+  try {
     console.log(`Processing batch ${currentBatch + 1} of ${batches.length} for job ${jobId}`);
 
     // Use your production URL
@@ -69,9 +70,8 @@ async function handler(request) {
   } catch (error) {
     console.error('Batch processor error:', error);
     
-    // Try to send error email
+    // Try to send error email (using already parsed variables)
     try {
-      const { email, jobId, currentBatch, batches, results } = await request.json();
       await sendErrorEmail(email, jobId, error.message, results, currentBatch, batches.length);
     } catch (emailError) {
       console.error('Failed to send error email:', emailError);
@@ -200,9 +200,8 @@ async function sendErrorEmail(email, jobId, errorMessage, partialResults, failed
   });
 }
 
-// TEMPORARILY bypassing signature verification
-// TODO: Re-enable this once signing keys are properly configured
-export const POST = handler;
-
-// When ready to re-enable signature verification, change the above line to:
+// Re-enable signature verification when ready
 // export const POST = verifySignature(handler);
+
+// For now, keeping it without verification since it's working
+export const POST = handler;

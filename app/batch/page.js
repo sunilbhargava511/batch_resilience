@@ -38,6 +38,7 @@ export default function BatchScores() {
   const [uploadedTickers, setUploadedTickers] = useState([]);
   const [email, setEmail] = useState('');
   const [processingLargeBatch, setProcessingLargeBatch] = useState(false);
+  const [batchJobInfo, setBatchJobInfo] = useState(null);
   const fileInputRef = useRef(null);
 
   const models = [
@@ -250,14 +251,14 @@ export default function BatchScores() {
 
         setAnalysisProgress({ stage: 'Job submitted!', progress: 100 });
         
-        // Show success message
-        setResults([{
-          ticker: 'BATCH JOB',
-          company_name: `Processing ${tickers.length} tickers`,
-          resilience_score: 0,
-          optionality_score: 0,
-          notes: `Results will be emailed to ${email} in approximately ${data.estimatedTime}. You can close this window.`
-        }]);
+        // Set batch job info instead of fake results
+        setBatchJobInfo({
+          tickerCount: tickers.length,
+          email: email,
+          estimatedTime: data.estimatedTime,
+          jobId: data.jobId
+        });
+        setResults([]);  // Clear any existing results
       }
     } catch (err) {
       setError(err.message || 'An error occurred while analyzing tickers');
@@ -279,6 +280,7 @@ export default function BatchScores() {
     setTickerInput('');
     setResults([]);
     setError('');
+    setBatchJobInfo(null);
     removeUploadedFile();
   };
 
@@ -680,29 +682,37 @@ export default function BatchScores() {
           </div>
 
           {/* Results Section for batch jobs */}
-          {processingLargeBatch && results.length > 0 && results[0].ticker === 'BATCH JOB' && (
+          {batchJobInfo && (
             <div className="bg-white/10 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full mb-4">
                   <Mail className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Batch Job Submitted!</h3>
-                <p className="text-white/80 mb-4">{results[0].notes}</p>
+                <h3 className="text-2xl font-bold text-white mb-2">Batch Job Submitted Successfully!</h3>
+                <p className="text-white/80 mb-4">
+                  Processing {batchJobInfo.tickerCount} companies in the background
+                </p>
                 <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl p-4 max-w-md mx-auto">
                   <p className="text-emerald-200 text-sm">
                     <strong>What happens next:</strong><br/>
                     1. Your batch will be processed in chunks of 25<br/>
                     2. Each chunk has a 30-second delay to respect API limits<br/>
-                    3. You'll receive an email with the complete CSV file<br/>
-                    4. The email includes all scores and summary statistics
+                    3. Results will be emailed to <strong>{batchJobInfo.email}</strong><br/>
+                    4. Estimated time: <strong>{batchJobInfo.estimatedTime}</strong><br/>
+                    5. You can safely close this window
                   </p>
                 </div>
+                {batchJobInfo.jobId && (
+                  <p className="text-white/60 text-sm mt-4">
+                    Job ID: {batchJobInfo.jobId}
+                  </p>
+                )}
               </div>
             </div>
           )}
 
           {/* Regular Results Section */}
-          {!processingLargeBatch && results.length > 0 && (
+          {!batchJobInfo && results.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               {/* Results Header */}
               <div className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 text-white p-6">

@@ -49,7 +49,7 @@ export async function POST(request) {
       );
     }
 
-    console.log(`Processing ${tickers.length} tickers with model ${model || 'claude-3-5-sonnet-20241022'}`);
+    console.log(`Processing ${tickers.length} tickers with model ${model || process.env.DEFAULT_MODEL || 'claude-sonnet-4-20250514'}`);
 
     // Enhanced prompt with clearer instructions for large batches
     const BATCH_SCORING_PROMPT = `You are a financial analyst using Complexity Investing framework. 
@@ -99,7 +99,7 @@ Return the JSON only - no other text. Include all ${tickers.length} companies in
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: model || 'claude-3-5-sonnet-20241022',
+        model: model || process.env.DEFAULT_MODEL || 'claude-sonnet-4-20250514',
         max_tokens: maxTokens,
         messages: [
           {
@@ -310,12 +310,16 @@ Return the JSON only - no other text. Include all ${tickers.length} companies in
 export async function GET() {
   const batchSizeLimit = parseInt(process.env.BATCH_SIZE_LIMIT) || 500;
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+  const defaultModel = process.env.DEFAULT_MODEL || 'claude-sonnet-4-20250514';
   
   return NextResponse.json({
     batch_size_limit: batchSizeLimit,
+    default_model: defaultModel,
     estimated_time_per_100_companies: "30-60 seconds",
     api_configured: hasApiKey,
     available_models: [
+      'claude-sonnet-4-20250514',
+      'claude-opus-4-20250514',
       'claude-3-5-sonnet-20241022',
       'claude-3-opus-20240229',
       'claude-3-sonnet-20240229'

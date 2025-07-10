@@ -263,7 +263,7 @@ export default function Home() {
                 <span className="text-slate-300">Complexity Framework</span>
                 <span className="text-slate-500">•</span>
                 <Zap className="w-5 h-5 text-purple-400" />
-                <span className="text-slate-300">Powered by Claude AI</span>
+                <span className="text-slate-300">Powered by Claude 4 AI</span>
               </div>
               <p className="text-sm text-slate-400 leading-relaxed">
                 Advanced resilience evaluation platform using complexity investing principles. 
@@ -275,6 +275,8 @@ export default function Home() {
                 <span>Resilience Framework</span>
                 <span>•</span>
                 <span>Strategic Assessment</span>
+                <span>•</span>
+                <span>Powered by Claude 4</span>
               </div>
             </div>
           </div>

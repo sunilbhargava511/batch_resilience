@@ -65,6 +65,9 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 # Optional: Maximum batch size limit (default: 500)
 BATCH_SIZE_LIMIT=500
+
+# Optional: Default AI model (default: claude-sonnet-4-20250514)
+DEFAULT_MODEL=claude-sonnet-4-20250514
 ```
 
 ### Environment Variable Details
@@ -74,6 +77,14 @@ BATCH_SIZE_LIMIT=500
   - Default: 500
   - Recommended range: 100-1000
   - Higher values may increase processing time and API costs
+- **`DEFAULT_MODEL`** (Optional): Default AI model to use for analysis
+  - Default: `claude-sonnet-4-20250514` (Claude Sonnet 4)
+  - Available models:
+    - `claude-sonnet-4-20250514` - Claude Sonnet 4 (Latest and most capable)
+    - `claude-opus-4-20250514` - Claude Opus 4 (Most powerful for complex analysis)
+    - `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet
+    - `claude-3-opus-20240229` - Claude 3 Opus
+    - `claude-3-sonnet-20240229` - Claude 3 Sonnet
 
 ## Performance Considerations
 
@@ -95,8 +106,9 @@ This app is designed to deploy easily on Vercel:
 1. Push to GitHub
 2. Import in Vercel
 3. Add environment variables:
-   - `ANTHROPIC_API_KEY`
-   - `BATCH_SIZE_LIMIT` (optional)
+   - `ANTHROPIC_API_KEY` (required)
+   - `BATCH_SIZE_LIMIT` (optional, default: 500)
+   - `DEFAULT_MODEL` (optional, default: claude-sonnet-4-20250514)
 4. Deploy
 
 ## API Endpoints

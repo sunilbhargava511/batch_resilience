@@ -28,7 +28,7 @@ import {
 
 export default function BatchScores() {
   const [tickerInput, setTickerInput] = useState('');
-  const [model, setModel] = useState('claude-3-5-sonnet-20241022');
+  const [model, setModel] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
@@ -42,8 +42,10 @@ export default function BatchScores() {
   const fileInputRef = useRef(null);
 
   const models = [
-    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Best available - excellent intelligence and speed' },
-    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', description: 'Highest intelligence for complex analysis' },
+    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Latest and most capable - excellent intelligence and speed' },
+    { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', description: 'Most powerful model for complex challenges' },
+    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Previous generation - proven reliability' },
+    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', description: 'High intelligence for complex analysis' },
     { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', description: 'Good balance of performance and cost' }
   ];
 
@@ -56,9 +58,17 @@ export default function BatchScores() {
         const response = await fetch('/api/batch-scores');
         const config = await response.json();
         setBatchSizeLimit(config.batch_size_limit);
+        
+        // Set default model from config or fallback
+        if (config.default_model) {
+          setModel(config.default_model);
+        } else {
+          setModel('claude-sonnet-4-20250514'); // Default to Sonnet 4
+        }
       } catch (err) {
         console.error('Failed to fetch batch config:', err);
         // Keep default of 500 if fetch fails
+        setModel('claude-sonnet-4-20250514'); // Default to Sonnet 4
       }
     };
     

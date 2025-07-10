@@ -7,7 +7,7 @@ const qstash = new Client({
 
 export async function POST(request) {
   try {
-    const { tickers, model, email } = await request.json();
+    const { tickers, model, email, tickerOnlyMode } = await request.json();
 
     if (!email || !tickers || tickers.length === 0) {
       return NextResponse.json(
@@ -28,7 +28,8 @@ export async function POST(request) {
     // Use your production URL
     const baseUrl = 'https://batch-resilience.vercel.app';
 
-    console.log(`Creating batch job ${jobId} for ${tickers.length} tickers in ${batches.length} batches of ${batchSize}`);
+    console.log(`Creating batch job ${jobId} for ${tickers.length} ${tickerOnlyMode ? 'tickers' : 'companies'} in ${batches.length} batches of ${batchSize}`);
+    console.log(`Mode: ${tickerOnlyMode ? 'ticker-only' : 'any-company'}`);
     console.log(`Webhook URL: ${baseUrl}/api/batch-processor`);
 
     // Queue the job
@@ -40,7 +41,8 @@ export async function POST(request) {
         model,
         email,
         currentBatch: 0,
-        results: []
+        results: [],
+        tickerOnlyMode
       },
     });
 
@@ -49,9 +51,10 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       jobId,
-      message: `Processing ${tickers.length} tickers in ${batches.length} batches`,
+      message: `Processing ${tickers.length} ${tickerOnlyMode ? 'tickers' : 'companies'} in ${batches.length} batches`,
       estimatedTime: `${estimatedMinutes}-${estimatedMinutes + 2} minutes`,
-      batchSize: batchSize
+      batchSize: batchSize,
+      mode: tickerOnlyMode ? 'ticker-only' : 'any-company'
     });
 
   } catch (error) {

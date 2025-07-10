@@ -39,6 +39,7 @@ export default function BatchScores() {
   const [email, setEmail] = useState('');
   const [processingLargeBatch, setProcessingLargeBatch] = useState(false);
   const [batchJobInfo, setBatchJobInfo] = useState(null);
+  const [tickerOnlyMode, setTickerOnlyMode] = useState(false);
   const fileInputRef = useRef(null);
 
   const models = [
@@ -49,7 +50,9 @@ export default function BatchScores() {
     { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', description: 'Good balance of performance and cost' }
   ];
 
-  const exampleTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX'];
+  const exampleTickers = tickerOnlyMode 
+    ? ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX']
+    : ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'OpenAI', 'Stripe', 'SpaceX', 'Databricks'];
 
   // Fetch batch configuration on component mount
   useEffect(() => {
@@ -76,10 +79,17 @@ export default function BatchScores() {
   }, []);
 
   const processTickerInput = (input) => {
-    const manualTickers = input
-      .toUpperCase()
-      .split(/[,\s\n]+/)
-      .filter(ticker => ticker.trim());
+    let manualTickers = input
+      .split(/[\n,]+/) // Split by newlines or commas
+      .map(ticker => ticker.trim())
+      .filter(ticker => ticker.length > 0);
+    
+    // Apply ticker-only filter if in strict mode
+    if (tickerOnlyMode) {
+      manualTickers = manualTickers
+        .filter(ticker => /^[A-Za-z]{1,5}$/.test(ticker))
+        .map(ticker => ticker.toUpperCase());
+    }
     
     // Combine manual input with uploaded tickers, remove duplicates
     const allTickers = [...new Set([...manualTickers, ...uploadedTickers])];
@@ -100,32 +110,40 @@ export default function BatchScores() {
           const hasHeader = firstLine && (
             firstLine.toLowerCase().includes('ticker') ||
             firstLine.toLowerCase().includes('symbol') ||
-            firstLine.toLowerCase().includes('stock') ||
-            isNaN(firstLine.charAt(0))
+            firstLine.toLowerCase().includes('company') ||
+            firstLine.toLowerCase().includes('name') ||
+            // Check if first line doesn't look like a company identifier
+            !/^[A-Z0-9\s\-\.]+$/i.test(firstLine.split(/[,;\t]/)[0])
           );
           
           const dataLines = hasHeader ? lines.slice(1) : lines;
-          const tickers = [];
+          const companies = [];
           
           dataLines.forEach(line => {
             // Handle different CSV formats
             const cells = line.split(/[,;\t]/).map(cell => cell.trim());
             
-            // Look for ticker-like values (typically uppercase letters, 1-5 chars)
             cells.forEach(cell => {
               // Remove quotes if present
               const cleanCell = cell.replace(/["']/g, '').trim();
               
-              // Check if it looks like a ticker symbol
-              if (cleanCell && /^[A-Za-z]{1,5}$/.test(cleanCell)) {
-                tickers.push(cleanCell.toUpperCase());
+              if (tickerOnlyMode) {
+                // Strict mode: only accept ticker-like values (1-5 uppercase letters)
+                if (cleanCell && /^[A-Za-z]{1,5}$/.test(cleanCell)) {
+                  companies.push(cleanCell.toUpperCase());
+                }
+              } else {
+                // Flexible mode: accept any non-empty cell as a potential company identifier
+                if (cleanCell && cleanCell.length > 0) {
+                  companies.push(cleanCell);
+                }
               }
             });
           });
           
           // Remove duplicates
-          const uniqueTickers = [...new Set(tickers)];
-          resolve(uniqueTickers);
+          const uniqueCompanies = [...new Set(companies)];
+          resolve(uniqueCompanies);
         } catch (err) {
           reject(new Error('Failed to parse CSV file'));
         }
@@ -152,19 +170,19 @@ export default function BatchScores() {
     setUploadedFile(file);
     
     try {
-      const tickers = await parseCSVFile(file);
+      const companies = await parseCSVFile(file);
       
-      if (tickers.length === 0) {
-        setError('No valid ticker symbols found in CSV file');
+      if (companies.length === 0) {
+        setError('No valid company identifiers found in CSV file');
         setUploadedFile(null);
         setUploadedTickers([]);
         return;
       }
       
-      setUploadedTickers(tickers);
+      setUploadedTickers(companies);
       
       // Show success message
-      const message = `Loaded ${tickers.length} ticker${tickers.length > 1 ? 's' : ''} from ${file.name}`;
+      const message = `Loaded ${companies.length} compan${companies.length > 1 ? 'ies' : 'y'} from ${file.name}`;
       console.log(message);
       
     } catch (err) {
@@ -182,32 +200,32 @@ export default function BatchScores() {
     }
   };
 
-  const getEstimatedTime = (tickerCount) => {
-    if (tickerCount <= 20) return '15-30 seconds';
-    if (tickerCount <= 50) return '30-60 seconds';
-    if (tickerCount <= 100) return '1-2 minutes';
-    if (tickerCount <= 250) return '2-4 minutes';
+  const getEstimatedTime = (companyCount) => {
+    if (companyCount <= 20) return '15-30 seconds';
+    if (companyCount <= 50) return '30-60 seconds';
+    if (companyCount <= 100) return '1-2 minutes';
+    if (companyCount <= 250) return '2-4 minutes';
     return '4-8 minutes';
   };
 
-  const getWarningLevel = (tickerCount) => {
-    if (tickerCount <= 50) return null;
-    if (tickerCount <= 100) return 'info';
-    if (tickerCount <= 250) return 'warning';
+  const getWarningLevel = (companyCount) => {
+    if (companyCount <= 50) return null;
+    if (companyCount <= 100) return 'info';
+    if (companyCount <= 250) return 'warning';
     return 'high';
   };
 
   const analyzeTickers = async () => {
-    const tickers = processTickerInput(tickerInput);
+    const companies = processTickerInput(tickerInput);
     
-    if (tickers.length === 0) {
-      setError('Please enter ticker symbols or upload a CSV file');
+    if (companies.length === 0) {
+      setError('Please enter company names/tickers or upload a CSV file');
       return;
     }
 
     // For batches larger than 25, require email
-    if (tickers.length > 25 && !email) {
-      setError('Please enter your email address for batches larger than 25 tickers');
+    if (companies.length > 25 && !email) {
+      setError('Please enter your email address for batches larger than 25 companies');
       return;
     }
 
@@ -216,14 +234,14 @@ export default function BatchScores() {
     setResults([]);
     
     try {
-      if (tickers.length <= 25) {
+      if (companies.length <= 25) {
         // Process small batches immediately (existing code)
         setAnalysisProgress({ stage: 'Preparing analysis...', progress: 10 });
         
         const response = await fetch('/api/batch-scores', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tickers, model })
+          body: JSON.stringify({ tickers: companies, model, tickerOnlyMode })
         });
 
         setAnalysisProgress({ stage: 'Processing response...', progress: 80 });
@@ -248,9 +266,10 @@ export default function BatchScores() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            tickers, 
+            tickers: companies, 
             model, 
-            email 
+            email,
+            tickerOnlyMode 
           })
         });
 
@@ -263,7 +282,7 @@ export default function BatchScores() {
         
         // Set batch job info instead of fake results
         setBatchJobInfo({
-          tickerCount: tickers.length,
+          tickerCount: companies.length,
           email: email,
           estimatedTime: data.estimatedTime,
           jobId: data.jobId
@@ -271,7 +290,7 @@ export default function BatchScores() {
         setResults([]);  // Clear any existing results
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while analyzing tickers');
+      setError(err.message || 'An error occurred while analyzing companies');
       setAnalysisProgress({ stage: '', progress: 0 });
     } finally {
       setTimeout(() => {
@@ -314,20 +333,35 @@ export default function BatchScores() {
   };
 
   const downloadSampleCSV = () => {
-    const sampleCSV = [
-      'Ticker,Company Name',
-      'AAPL,Apple Inc',
-      'MSFT,Microsoft Corporation',
-      'GOOGL,Alphabet Inc',
-      'AMZN,Amazon.com Inc',
-      'TSLA,Tesla Inc'
-    ].join('\n');
+    const sampleCSV = tickerOnlyMode
+      ? [
+          'Ticker',
+          'AAPL',
+          'MSFT',
+          'GOOGL',
+          'AMZN',
+          'TSLA',
+          'NVDA',
+          'META',
+          'NFLX'
+        ].join('\n')
+      : [
+          'Company',
+          'Apple Inc',
+          'Microsoft Corporation',
+          'Alphabet Inc',
+          'Amazon.com Inc',
+          'OpenAI',
+          'Stripe',
+          'SpaceX',
+          'Databricks'
+        ].join('\n');
     
     const blob = new Blob([sampleCSV], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sample_tickers.csv';
+    a.download = tickerOnlyMode ? 'sample_tickers.csv' : 'sample_companies.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -361,9 +395,9 @@ export default function BatchScores() {
     return 'Poor';
   };
 
-  const currentTickerCount = processTickerInput(tickerInput).length;
-  const warningLevel = getWarningLevel(currentTickerCount);
-  const estimatedTime = getEstimatedTime(currentTickerCount);
+  const currentCompanyCount = processTickerInput(tickerInput).length;
+  const warningLevel = getWarningLevel(currentCompanyCount);
+  const estimatedTime = getEstimatedTime(currentCompanyCount);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white">
@@ -414,7 +448,10 @@ export default function BatchScores() {
           
           <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
             Get resilience and optionality scores for multiple companies instantly. 
-            Perfect for portfolio screening and competitive analysis.
+            {tickerOnlyMode 
+              ? 'Currently in ticker-only mode for public stocks.'
+              : 'Works with public tickers, private companies, and company names.'
+            }
           </p>
         </header>
 
@@ -428,8 +465,33 @@ export default function BatchScores() {
                 <div>
                   <label className="block text-white font-semibold mb-3 flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-emerald-400" />
-                    Ticker Symbols
+                    {tickerOnlyMode ? 'Ticker Symbols Only' : 'Company Names or Ticker Symbols'}
                   </label>
+                  
+                  {/* Mode Toggle */}
+                  <div className="flex items-center justify-between mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-white/80">
+                        Input Mode:
+                      </label>
+                      <span className="text-sm font-medium text-white">
+                        {tickerOnlyMode ? 'Tickers Only' : 'Any Company'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setTickerOnlyMode(!tickerOnlyMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        tickerOnlyMode ? 'bg-blue-600' : 'bg-emerald-600'
+                      }`}
+                    >
+                      <span className="sr-only">Toggle input mode</span>
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          tickerOnlyMode ? 'translate-x-1' : 'translate-x-6'
+                        }`}
+                      />
+                    </button>
+                  </div>
                   
                   {/* Input Methods Tabs */}
                   <div className="flex gap-2 mb-4">
@@ -437,7 +499,10 @@ export default function BatchScores() {
                       <textarea
                         value={tickerInput}
                         onChange={(e) => setTickerInput(e.target.value)}
-                        placeholder="Enter ticker symbols separated by commas or spaces&#10;Example: AAPL, MSFT, GOOGL, AMZN"
+                        placeholder={tickerOnlyMode 
+                          ? "Enter ticker symbols only (1-5 letters)\nExample: AAPL, MSFT, GOOGL, AMZN"
+                          : "Enter company names or tickers (one per line or comma-separated)\nExamples:\nAAPL, MSFT, GOOGL\nOpenAI\nStripe\nSpaceX"
+                        }
                         className="w-full h-32 px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
                       />
                       {tickerInput && (
@@ -490,7 +555,7 @@ export default function BatchScores() {
                           <FileText className="w-4 h-4" />
                           <span>{uploadedFile.name}</span>
                           <span className="text-emerald-300 font-medium">
-                            ({uploadedTickers.length} tickers)
+                            ({uploadedTickers.length} companies)
                           </span>
                         </div>
                         <button
@@ -503,7 +568,10 @@ export default function BatchScores() {
                     )}
                     
                     <div className="text-xs text-white/50 mt-2">
-                      CSV should contain ticker symbols. Headers are optional.
+                      {tickerOnlyMode 
+                        ? 'CSV should contain ticker symbols (1-5 letters only). Headers optional.'
+                        : 'CSV should contain company names or ticker symbols. Headers optional.'
+                      }
                     </div>
                   </div>
                   
@@ -515,14 +583,14 @@ export default function BatchScores() {
                       Load Examples
                     </button>
                     <div className="text-sm text-white/60 flex items-center">
-                      {currentTickerCount}/{batchSizeLimit} tickers
+                      {currentCompanyCount}/{batchSizeLimit} {tickerOnlyMode ? 'tickers' : 'companies'}
                       {uploadedTickers.length > 0 && (
                         <span className="ml-2 text-emerald-400">
                           ({uploadedTickers.length} from CSV)
                         </span>
                       )}
                     </div>
-                    {currentTickerCount > 0 && (
+                    {currentCompanyCount > 0 && (
                       <div className="flex items-center gap-1 text-sm text-white/60">
                         <Clock className="w-3 h-3" />
                         <span>~{estimatedTime}</span>
@@ -532,11 +600,11 @@ export default function BatchScores() {
                 </div>
 
                 {/* Email input field for large batches */}
-                {currentTickerCount > 15 && (
+                {currentCompanyCount > 15 && (
                   <div className="mt-4">
                     <label className="block text-white font-semibold mb-3 flex items-center gap-2">
                       <Mail className="w-5 h-5 text-emerald-400" />
-                      Email for Results (Required for 15+ tickers)
+                      Email for Results (Required for 15+ {tickerOnlyMode ? 'tickers' : 'companies'})
                     </label>
                     <input
                       type="email"
@@ -544,7 +612,7 @@ export default function BatchScores() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="your@email.com"
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                      required={currentTickerCount > 15}
+                      required={currentCompanyCount > 15}
                     />
                     <p className="text-xs text-white/60 mt-2">
                       Large batches are processed in the background. Results will be emailed as a CSV file.
@@ -573,9 +641,9 @@ export default function BatchScores() {
                         {warningLevel === 'high' && 'Very Large Batch'}
                       </div>
                       <div>
-                        {currentTickerCount > 250 
-                          ? `Analyzing ${currentTickerCount} companies will take ${estimatedTime}. Consider starting with a smaller batch to test.`
-                          : currentTickerCount > 100
+                        {currentCompanyCount > 250 
+                          ? `Analyzing ${currentCompanyCount} companies will take ${estimatedTime}. Consider starting with a smaller batch to test.`
+                          : currentCompanyCount > 100
                           ? `This analysis will take approximately ${estimatedTime}. Please be patient.`
                           : `Analysis will take approximately ${estimatedTime}.`
                         }
@@ -633,21 +701,40 @@ export default function BatchScores() {
                 </div>
 
                 <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                  <h3 className="text-white font-semibold mb-3">Input Methods</h3>
-                  <div className="space-y-3 text-sm text-white/70">
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-1.5"></div>
-                      <span><strong>Manual:</strong> Type or paste tickers directly</span>
+                  <h3 className="text-white font-semibold mb-3">
+                    {tickerOnlyMode ? 'Ticker Mode (Strict)' : 'Supported Companies'}
+                  </h3>
+                  {tickerOnlyMode ? (
+                    <div className="space-y-3 text-sm text-white/70">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-1.5"></div>
+                        <span><strong>Format:</strong> 1-5 letter ticker symbols only</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5"></div>
+                        <span><strong>Examples:</strong> AAPL, MSFT, GOOGL, TSLA</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5"></div>
+                        <span><strong>Best for:</strong> Public stock analysis</span>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5"></div>
-                      <span><strong>CSV Upload:</strong> Upload a file with ticker symbols</span>
+                  ) : (
+                    <div className="space-y-3 text-sm text-white/70">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-1.5"></div>
+                        <span><strong>Public companies:</strong> AAPL, MSFT, GOOGL</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1.5"></div>
+                        <span><strong>Private companies:</strong> OpenAI, Stripe, SpaceX</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5"></div>
+                        <span><strong>Full names:</strong> "Hugging Face", "23andMe"</span>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-1.5"></div>
-                      <span><strong>Combined:</strong> Use both methods together</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Progress Indicator */}
@@ -664,7 +751,7 @@ export default function BatchScores() {
                       ></div>
                     </div>
                     <div className="text-sm text-white/60 mt-2">
-                      {currentTickerCount > 15 ? 'Submitting batch job...' : `Analyzing ${currentTickerCount} companies...`}
+                      {currentCompanyCount > 15 ? 'Submitting batch job...' : `Analyzing ${currentCompanyCount} companies...`}
                     </div>
                   </div>
                 )}
@@ -672,7 +759,7 @@ export default function BatchScores() {
                 {/* Action Button */}
                 <button
                   onClick={analyzeTickers}
-                  disabled={currentTickerCount === 0 || loading}
+                  disabled={currentCompanyCount === 0 || loading}
                   className="w-full bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 hover:from-emerald-700 hover:via-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] shadow-2xl"
                 >
                   {loading ? (
@@ -683,7 +770,7 @@ export default function BatchScores() {
                   ) : (
                     <div className="flex items-center justify-center gap-3">
                       <BarChart3 className="w-5 h-5" />
-                      <span>Analyze {currentTickerCount} Tickers</span>
+                      <span>Analyze {currentCompanyCount} {tickerOnlyMode ? 'Tickers' : 'Companies'}</span>
                     </div>
                   )}
                 </button>

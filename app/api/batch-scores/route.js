@@ -1,11 +1,11 @@
-// app/api/batch-scores/route.js - Improved batch scoring endpoint with better error handling
+// app/api/batch-scores/route.js - Updated to handle ticker-only mode
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   const startTime = Date.now();
   
   try {
-    const { tickers, model } = await request.json();
+    const { tickers, model, tickerOnlyMode } = await request.json();
 
     if (!tickers || !Array.isArray(tickers) || tickers.length === 0) {
       return NextResponse.json(
@@ -49,12 +49,15 @@ export async function POST(request) {
       );
     }
 
-    console.log(`Processing ${tickers.length} tickers with model ${model || process.env.DEFAULT_MODEL || 'claude-sonnet-4-20250514'}`);
+    console.log(`Processing ${tickers.length} tickers with model ${model || process.env.DEFAULT_MODEL || 'claude-sonnet-4-20250514'} in ${tickerOnlyMode ? 'ticker-only' : 'any company'} mode`);
 
-    // Enhanced prompt with clearer instructions for large batches
-    const BATCH_SCORING_PROMPT = `You are a financial analyst using Complexity Investing framework. 
+    // Create appropriate prompt based on mode
+    const BATCH_SCORING_PROMPT = tickerOnlyMode
+      ? `You are a financial analyst using Complexity Investing framework. 
 
-IMPORTANT: You are analyzing ${tickers.length} companies. For each company ticker symbol provided, evaluate and return ONLY two scores:
+IMPORTANT: You are analyzing ${tickers.length} public company ticker symbols.
+
+For each ticker symbol provided, evaluate and return ONLY two scores:
 
 1. **Resilience Score (1-10)**: Overall ability to adapt and thrive in changing conditions
    - Consider: adaptability, financial strength, competitive moats, diversification
@@ -82,9 +85,53 @@ IMPORTANT: You are analyzing ${tickers.length} companies. For each company ticke
 }
 \`\`\`
 
-**Tickers to analyze (${tickers.length} total):** ${tickers.join(', ')}
+**Ticker symbols to analyze (${tickers.length} total):** ${tickers.join(', ')}
 
-Return the JSON only - no other text. Include all ${tickers.length} companies in your response.`;
+Return the JSON only - no other text. Include all ${tickers.length} companies in your response.`
+      : `You are a financial analyst using Complexity Investing framework. 
+
+IMPORTANT: You are analyzing ${tickers.length} companies. The input may contain:
+- Public company ticker symbols (e.g., AAPL, MSFT)
+- Private company names (e.g., OpenAI, Stripe, SpaceX)
+- Full company names (e.g., "Hugging Face", "23andMe", "Berkshire Hathaway")
+
+For each company identifier provided, evaluate and return ONLY two scores:
+
+1. **Resilience Score (1-10)**: Overall ability to adapt and thrive in changing conditions
+   - Consider: adaptability, financial strength, competitive moats, diversification
+   - 10 = Extremely resilient (Amazon, Microsoft level)
+   - 1 = Highly fragile
+
+2. **Optionality Score (1-10)**: Potential for growth through adjacent markets and new opportunities
+   - Consider: platform extensibility, adjacent market opportunities, innovation pipeline, strategic options
+   - 10 = Exceptional optionality (many high-value expansion paths)
+   - 1 = Very limited growth options
+
+**CRITICAL: Respond ONLY in this exact JSON format with ALL ${tickers.length} companies:**
+
+\`\`\`json
+{
+  "results": [
+    {
+      "ticker": "AAPL",
+      "company_name": "Apple Inc.",
+      "resilience_score": 8.5,
+      "optionality_score": 7.0,
+      "notes": "Brief 1-2 sentence rationale"
+    }
+  ]
+}
+\`\`\`
+
+Notes:
+- For private companies, use the company name as both "ticker" and add the full name in "company_name"
+- If you recognize a ticker symbol, use the proper company name
+- If given a company name, try to identify it and provide scores
+- Include all ${tickers.length} companies in your response
+
+**Companies to analyze (${tickers.length} total):** ${tickers.join(', ')}
+
+Return the JSON only - no other text.`;
 
     // Adjust max_tokens based on batch size
     const maxTokens = Math.min(4000, Math.max(2000, tickers.length * 60));
@@ -234,7 +281,9 @@ Return the JSON only - no other text. Include all ${tickers.length} companies in
           { 
             error: 'Incomplete results',
             details: `Requested analysis for ${tickers.length} companies but only received ${scores.results.length} results.`,
-            suggestion: 'Some tickers might be unrecognized. Try with well-known company tickers.',
+            suggestion: tickerOnlyMode 
+              ? 'Some tickers might be invalid. Please check that all entries are valid 1-5 letter ticker symbols.'
+              : 'Some companies might be unrecognized. Try with well-known company names or tickers.',
             missing_tickers: missingTickers.slice(0, 10), // Show first 10 missing
             missing_count: missingCount
           },
@@ -276,6 +325,7 @@ Return the JSON only - no other text. Include all ${tickers.length} companies in
         requested_count: tickers.length,
         batch_size_limit: batchSizeLimit,
         processing_time_ms: totalTime,
+        mode: tickerOnlyMode ? 'ticker-only' : 'any-company',
         timestamp: new Date().toISOString()
       });
 

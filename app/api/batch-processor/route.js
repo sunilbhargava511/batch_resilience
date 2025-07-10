@@ -12,10 +12,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 async function handler(request) {
   // Parse body once at the beginning
   const body = await request.json();
-  const { jobId, batches, model, email, currentBatch, results } = body;
+  const { jobId, batches, model, email, currentBatch, results, tickerOnlyMode } = body;
 
   try {
-    console.log(`Processing batch ${currentBatch + 1} of ${batches.length} for job ${jobId}`);
+    console.log(`Processing batch ${currentBatch + 1} of ${batches.length} for job ${jobId} in ${tickerOnlyMode ? 'ticker-only' : 'any-company'} mode`);
 
     // Use your production URL
     const baseUrl = 'https://batch-resilience.vercel.app';
@@ -25,7 +25,8 @@ async function handler(request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         tickers: batches[currentBatch], 
-        model 
+        model,
+        tickerOnlyMode 
       })
     });
 
@@ -49,7 +50,8 @@ async function handler(request) {
           model,
           email,
           currentBatch: currentBatch + 1,
-          results: allResults
+          results: allResults,
+          tickerOnlyMode
         },
         delay: 30 // 30-second delay
       });
@@ -58,7 +60,7 @@ async function handler(request) {
     } else {
       // All batches complete - send email
       console.log(`All batches complete for job ${jobId}. Sending email to ${email}`);
-      await sendResultsEmail(email, allResults, jobId);
+      await sendResultsEmail(email, allResults, jobId, tickerOnlyMode);
     }
 
     return NextResponse.json({
@@ -84,12 +86,12 @@ async function handler(request) {
   }
 }
 
-async function sendResultsEmail(email, results, jobId) {
+async function sendResultsEmail(email, results, jobId, tickerOnlyMode) {
   // Generate CSV content
   const csv = [
-    'Ticker,Company Name,Resilience Score,Optionality Score,Notes',
+    'Company Identifier,Company Name,Resilience Score,Optionality Score,Notes',
     ...results.map(r => 
-      `${r.ticker},"${r.company_name}",${r.resilience_score},${r.optionality_score},"${r.notes.replace(/"/g, '""')}"`
+      `"${r.ticker}","${r.company_name}",${r.resilience_score},${r.optionality_score},"${r.notes.replace(/"/g, '""')}"`
     )
   ].join('\n');
 
@@ -102,7 +104,7 @@ async function sendResultsEmail(email, results, jobId) {
   const html = `
     <h2>Your Batch Analysis is Complete! 🎉</h2>
     
-    <p>Successfully analyzed <strong>${results.length} companies</strong> using the Complexity Investing framework.</p>
+    <p>Successfully analyzed <strong>${results.length} ${tickerOnlyMode ? 'public companies' : 'companies'}</strong> using the Complexity Investing framework.</p>
     
     <h3>Summary Statistics:</h3>
     <table style="border-collapse: collapse; margin: 20px 0;">
@@ -130,6 +132,7 @@ async function sendResultsEmail(email, results, jobId) {
     
     <p style="color: #666; font-size: 12px;">
       Job ID: ${jobId}<br>
+      Analysis Mode: ${tickerOnlyMode ? 'Ticker Symbols Only' : 'Any Company Name'}<br>
       Powered by Complexity Investing Framework<br>
       <a href="https://batch-resilience.vercel.app/">Run another analysis</a>
     </p>
@@ -179,9 +182,9 @@ async function sendErrorEmail(email, jobId, errorMessage, partialResults, failed
   let attachments = [];
   if (partialResults && partialResults.length > 0) {
     const csv = [
-      'Ticker,Company Name,Resilience Score,Optionality Score,Notes',
+      'Company Identifier,Company Name,Resilience Score,Optionality Score,Notes',
       ...partialResults.map(r => 
-        `${r.ticker},"${r.company_name}",${r.resilience_score},${r.optionality_score},"${r.notes.replace(/"/g, '""')}"`
+        `"${r.ticker}","${r.company_name}",${r.resilience_score},${r.optionality_score},"${r.notes.replace(/"/g, '""')}"`
       )
     ].join('\n');
 
